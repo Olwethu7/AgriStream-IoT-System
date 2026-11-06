@@ -29,9 +29,9 @@ You must configure the connection strings before deploying.
 Replace all `<...>` placeholders with your actual Azure values:
 *   `ConnectionStrings:AgriStreamSql`: Your Azure SQL connection string.
 *   `ConnectionStrings:AzureStorage`: Your Storage Account connection string.
-*   `FunctionApp:BaseUrl`: The URL of your deployed Function App (e.g., `https://myfuncapp.azurewebsites.net/api`).
+*   `FunctionApp:BaseUrl`: The URL of your deployed Function App (e.g., `https://agristream-functions-10344453.azurewebsites.net/api`).
 *   `FunctionApp:FunctionKey`: The host key for your Function App.
-*   `Seed:AdminPassword`: The password for the initial `admin` account. (This is created automatically in Azure SQL on the first run).
+*   `Seed:AdminPassword`: The password for the initial `admin` account.
 
 **For `AgriStreamFunctions`:**
 When deploying to Azure, add these settings under the Function App's **Environment variables**:
@@ -42,9 +42,22 @@ When deploying to Azure, add these settings under the Function App's **Environme
 
 ## 3. Deployment
 
-To deploy the code to Azure, use the following commands:
+The system is already deployed and live on Azure. You can access the running application here:
 
-**Deploy Functions:**
-```powershell
-cd AgriStreamFunctions
-func azure functionapp publish <your-function-app-name>
+**Live Application URL:** 
+[https://agristream-webapp-10344453-g9f7hqdjcmg8d8h7.southafricanorth-01.azurewebsites.net/Account/Login](https://agristream-webapp-10344453-g9f7hqdjcmg8d8h7.southafricanorth-01.azurewebsites.net/Account/Login)
+
+*Login Credentials:*
+*   Username: `admin`
+*   Password: `Password123!`
+
+**To deploy updates in the future:**
+*   **Web App:** Right-click the `AgriStreamWeb` project in Visual Studio and select **Publish**.
+*   **Functions:** Use the Azure Functions Core Tools to publish to `agristream-functions-10344453`.
+
+## Additional Notes
+
+*   **Security:** Passwords are securely hashed using ASP.NET Core's `PasswordHasher` (PBKDF2). They are never stored in plain text.
+*   **Frontend:** The UI uses Bootstrap 5.3, Chart.js, and Google Fonts, all loaded via CDN. An internet connection is required to view the styling and charts.
+*   **Telemetry:** Soil moisture, temperature, and humidity are optional fields on the image upload form. They are attached as metadata to the image and recorded by the Blob Trigger.
+*   **Secrets:** Never commit your `appsettings.json` or `local.settings.json` files if they contain real production passwords or keys.
