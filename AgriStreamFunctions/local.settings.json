@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+    "AgriStreamStorage": "DefaultEndpointsProtocol=https;AccountName=<your-storage-account>;AccountKey=<your-storage-key>;EndpointSuffix=core.windows.net",
+    "SqlConnectionString": "Server=tcp:<your-sql-server>.database.windows.net,1433;Initial Catalog=<your-database>;User ID=<sql-admin-user>;Password=<sql-admin-password>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    "TelemetryTableName": "TelemetryLogs"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

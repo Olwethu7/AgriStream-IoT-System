@@ -1,0 +1,177 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    var statusClass = Model.UserStatus switch
+    {
+        "Irrigating" => "status-active",
+        "Unknown" => "status-unknown",
+        _ => "status-idle"
+    };
+}
+
+<!-- Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 fade-in">
+    <div>
+        <p class="eyebrow mb-1">Operations overview</p>
+        <h1 class="h2 fw-bold mb-0">@greeting, @Model.DisplayName</h1>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <span class="status-chip @statusClass" id="userStatus">
+            <i class="bi bi-droplet-half"></i>
+            <span id="userStatusText">@Model.UserStatus</span>
+        </span>
+        <span class="mono small text-secondary" id="lastIrrigation">
+            @(Model.LastIrrigationAt.HasValue ? $"Last irrigation {Model.LastIrrigationAt.Value:yyyy-MM-dd HH:mm} UTC" : "No irrigation yet")
+        </span>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success alert-dismissible fade show fade-in" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@ok
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show fade-in" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@err
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- KPI tiles -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="glass-card kpi fade-in-up" style="--delay: .05s">
+            <div class="kpi-icon kpi-green"><i class="bi bi-moisture"></i></div>
+            <div>
+                <p class="kpi-label">Soil moisture</p>
+                <p class="kpi-value"><span id="kpiMoisture">--</span><small>%</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="glass-card kpi fade-in-up" style="--delay: .1s">
+            <div class="kpi-icon kpi-amber"><i class="bi bi-thermometer-half"></i></div>
+            <div>
+                <p class="kpi-label">Temperature</p>
+                <p class="kpi-value"><span id="kpiTemp">--</span><small>°C</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="glass-card kpi fade-in-up" style="--delay: .15s">
+            <div class="kpi-icon kpi-cyan"><i class="bi bi-cloud-drizzle"></i></div>
+            <div>
+                <p class="kpi-label">Humidity</p>
+                <p class="kpi-value"><span id="kpiHumidity">--</span><small>%</small></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="glass-card kpi fade-in-up" style="--delay: .2s">
+            <div class="kpi-icon kpi-violet"><i class="bi bi-camera"></i></div>
+            <div>
+                <p class="kpi-label">Drone captures</p>
+                <p class="kpi-value"><span id="kpiEvents">--</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Trend chart -->
+    <div class="col-lg-8">
+        <div class="glass-card p-4 h-100 fade-in-up" style="--delay: .25s">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2 class="h6 fw-semibold mb-0">Sensor trend</h2>
+                    <span class="small text-secondary">Latest readings from TelemetryLogs</span>
+                </div>
+                <span class="mono small text-secondary" id="lastUpdated">waiting for data…</span>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="trendChart" aria-label="Soil moisture and temperature trend" role="img"></canvas>
+                <div class="chart-empty" id="chartEmpty">No sensor readings yet. Upload a drone capture to start the stream.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="col-lg-4 d-flex flex-column gap-3">
+        <div class="glass-card p-4 fade-in-up" style="--delay: .3s">
+            <h2 class="h6 fw-semibold mb-3"><i class="bi bi-water me-2 text-info"></i>Irrigation control</h2>
+            <form id="irrigationForm" asp-controller="Dashboard" asp-action="Irrigate" method="post">
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label small text-secondary" for="irrField">Field</label>
+                        <input class="form-control" id="irrField" name="FieldId" value="FIELD-01" maxlength="50" required />
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small text-secondary" for="irrDuration">Minutes</label>
+                        <input class="form-control" id="irrDuration" name="DurationMinutes" type="number" min="1" max="240" value="15" required />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-glow btn-glow-cyan w-100" id="irrigateBtn">
+                    <i class="bi bi-send me-2"></i>Send irrigation command
+                </button>
+                <div class="small mt-2" id="irrigationResult" role="status"></div>
+            </form>
+        </div>
+
+        <div class="glass-card p-4 flex-grow-1 fade-in-up" style="--delay: .35s">
+            <h2 class="h6 fw-semibold mb-3"><i class="bi bi-cloud-upload me-2 text-success"></i>Upload drone image</h2>
+            <form asp-controller="Dashboard" asp-action="UploadImage" method="post" enctype="multipart/form-data" id="uploadForm">
+                <label class="dropzone mb-3" for="imageInput" id="dropzone">
+                    <i class="bi bi-image fs-3"></i>
+                    <span id="dropzoneText">Drop an image or click to browse</span>
+                    <input type="file" id="imageInput" name="image" accept=".jpg,.jpeg,.png,.webp,.tif,.tiff" required hidden />
+                </label>
+                <div class="row g-2 mb-3">
+                    <div class="col-12">
+                        <input class="form-control form-control-sm" name="fieldId" placeholder="Field ID (e.g. FIELD-01)" maxlength="50" />
+                    </div>
+                    <div class="col-4"><input class="form-control form-control-sm" name="soilMoisture" type="number" step="0.1" min="0" max="100" placeholder="Moist %" /></div>
+                    <div class="col-4"><input class="form-control form-control-sm" name="temperature" type="number" step="0.1" min="-40" max="70" placeholder="Temp °C" /></div>
+                    <div class="col-4"><input class="form-control form-control-sm" name="humidity" type="number" step="0.1" min="0" max="100" placeholder="Hum %" /></div>
+                </div>
+                <button type="submit" class="btn btn-glow w-100"><i class="bi bi-upload me-2"></i>Upload to Blob Storage</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Live feed -->
+<div class="glass-card p-4 fade-in-up" style="--delay: .4s">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 fw-semibold mb-0"><i class="bi bi-activity me-2 text-success"></i>Live telemetry feed</h2>
+        <button class="btn btn-ghost btn-sm" id="refreshBtn"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 telemetry-table">
+            <thead>
+                <tr>
+                    <th>Time (local)</th>
+                    <th>Field</th>
+                    <th>Event</th>
+                    <th class="text-end">Moisture</th>
+                    <th class="text-end">Temp</th>
+                    <th class="text-end">Humidity</th>
+                    <th>Source</th>
+                </tr>
+            </thead>
+            <tbody id="telemetryBody">
+                <tr><td colspan="7" class="text-center text-secondary py-4">Connecting to telemetry service…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}
